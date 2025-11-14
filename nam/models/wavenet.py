@@ -7,10 +7,7 @@ WaveNet implementation
 https://arxiv.org/abs/1609.03499
 """
 
-import json as _json
 from copy import deepcopy as _deepcopy
-from pathlib import Path as _Path
-from tempfile import TemporaryDirectory as _TemporaryDirectory
 from typing import (
     Dict as _Dict,
     Optional as _Optional,
@@ -19,13 +16,28 @@ from typing import (
 )
 
 import numpy as _np
+import numpy as np
 import torch as _torch
 import torch.nn as _nn
+from torch.nn import functional as F
 
 from ._abc import ImportsWeights as _ImportsWeights
 from ._activations import get_activation as _get_activation
-from .base import BaseNet as _BaseNet
 from ._names import ACTIVATION_NAME as _ACTIVATION_NAME, CONV_NAME as _CONV_NAME
+from .base import BaseNet as _BaseNet
+
+
+def sample_width(mu=0.8, sigma=0.1):
+    w = np.random.normal(mu, sigma)
+    return float(np.clip(w, 0.2, 1.0))
+
+
+def rand_channel(channels=1):
+    min_channels = 2
+    if channels < min_channels:
+        return channels
+    else:
+        return np.random.randint(low=min_channels, high=channels)
 
 
 class Conv1d(_nn.Conv1d):
@@ -44,13 +56,13 @@ class Conv1d(_nn.Conv1d):
         if self.weight is not None:
             n = self.weight.numel()
             self.weight.data = (
-                weights[i : i + n].reshape(self.weight.shape).to(self.weight.device)
+                weights[i: i + n].reshape(self.weight.shape).to(self.weight.device)
             )
             i += n
         if self.bias is not None:
             n = self.bias.numel()
             self.bias.data = (
-                weights[i : i + n].reshape(self.bias.shape).to(self.bias.device)
+                weights[i: i + n].reshape(self.bias.shape).to(self.bias.device)
             )
             i += n
         return i
@@ -58,13 +70,13 @@ class Conv1d(_nn.Conv1d):
 
 class _Layer(_nn.Module):
     def __init__(
-        self,
-        condition_size: int,
-        channels: int,
-        kernel_size: int,
-        dilation: int,
-        activation: str,
-        gated: bool,
+            self,
+            condition_size: int,
+            channels: int,
+            kernel_size: int,
+            dilation: int,
+            activation: str,
+            gated: bool,
     ):
         super().__init__()
         # Input mixer takes care of the bias
@@ -104,7 +116,7 @@ class _Layer(_nn.Module):
         )
 
     def forward(
-        self, x: _torch.Tensor, h: _Optional[_torch.Tensor], out_length: int
+            self, x: _torch.Tensor, h: _Optional[_torch.Tensor], out_length: int
     ) -> _Tuple[_Optional[_torch.Tensor], _torch.Tensor]:
         """
         :param x: (B,C,L1) From last layer
@@ -116,18 +128,38 @@ class _Layer(_nn.Module):
                 (B,C,L1-d) to mixer
             If final, next layer is None
         """
-        zconv = self.conv(x)
-        z1 = zconv + self._input_mixer(h)[:, :, -zconv.shape[2] :]
+
+        in_channels = x.shape[1]
+        out_channels = rand_channel(self.conv.out_channels)
+
+        # zconv = self.conv(x)
+
+        zconv = F.conv1d(x, self._conv.weight[:out_channels, :in_channels, :], bias=self._conv.bias[:out_channels, ...],
+                         stride=self._conv.stride, dilation=self._conv.dilation, groups=self._conv.groups)
+
+        # z1 = zconv + self._input_mixer(h)[:, :, -zconv.shape[2]:]
+
+        input_mixer = F.conv1d(h, self._input_mixer.weight[:out_channels, ...])
+        z1 = zconv + input_mixer[..., -zconv.shape[-1]:]
+
         post_activation = (
             self._activation(z1)
             if not self._gated
             else (
-                self._activation(z1[:, : self._channels])
-                * _torch.sigmoid(z1[:, self._channels :])
+                    self._activation(z1[:, : self._channels])
+                    * _torch.sigmoid(z1[:, self._channels:])
             )
         )
+
+        #         return (
+        #             x[:, :, -post_activation.shape[2]:] + self._1x1(post_activation),
+        #             post_activation[:, :, -out_length:],
+        #         )
+
+        _1x1 = F.conv1d(post_activation, self._1x1.weight[:in_channels:, :out_channels, :],
+                        self._1x1.bias[:in_channels])
         return (
-            x[:, :, -post_activation.shape[2] :] + self._1x1(post_activation),
+            x[:, :, -post_activation.shape[2]:] + _1x1,
             post_activation[:, :, -out_length:],
         )
 
@@ -152,16 +184,16 @@ class _Layers(_nn.Module):
     """
 
     def __init__(
-        self,
-        input_size: int,
-        condition_size: int,
-        head_size,
-        channels: int,
-        kernel_size: int,
-        dilations: _Sequence[int],
-        activation: str = "Tanh",
-        gated: bool = True,
-        head_bias: bool = True,
+            self,
+            input_size: int,
+            condition_size: int,
+            head_size,
+            channels: int,
+            kernel_size: int,
+            dilations: _Sequence[int],
+            activation: str = "Tanh",
+            gated: bool = True,
+            head_bias: bool = True,
     ):
         super().__init__()
         self._rechannel = Conv1d(input_size, channels, 1, bias=False)
@@ -209,10 +241,10 @@ class _Layers(_nn.Module):
         return self._head_rechannel.import_weights(weights, i)
 
     def forward(
-        self,
-        x: _torch.Tensor,
-        c: _torch.Tensor,
-        head_input: _Optional[_torch.Tensor] = None,
+            self,
+            x: _torch.Tensor,
+            c: _torch.Tensor,
+            head_input: _Optional[_torch.Tensor] = None,
     ) -> _Tuple[_torch.Tensor, _torch.Tensor]:
         """
         :param x: (B,Dx,L) layer input
@@ -223,15 +255,42 @@ class _Layers(_nn.Module):
             (B,Dc,L-R+1) layer output
         """
         out_length = x.shape[2] - (self.receptive_field - 1)
-        x = self._rechannel(x)
+
+        in_channels = x.shape[1]
+        out_channels = rand_channel(self._rechannel.out_channels)
+
+        # x = self._rechannel(x)
+        x = F.conv1d(x, self._rechannel.weight[:out_channels, :in_channels, :],
+                     groups=self._rechannel.groups, dilation=self._rechannel.dilation, stride=self._rechannel.stride)
+
         for layer in self._layers:
             x, head_term = layer(x, c, out_length)  # Ensures head_term sample length
-            head_input = (
-                head_term
-                if head_input is None
-                else head_input[:, :, -out_length:] + head_term
-            )
-        return self._head_rechannel(head_input), x
+            # head_input = (
+            #     head_term
+            #     if head_input is None
+            #     else head_input[:, :, -out_length:] + head_term
+            # )
+
+            if head_input is not None:
+                a = head_input.shape[1]
+                b = head_term.shape[1]
+                cc = max(a, b)
+                head_input = F.pad(head_input, (0, 0, 0, cc - a))[:, :, -out_length:] + F.pad(head_term,
+                                                                                              (0, 0, 0, cc - b))
+            else:
+                head_input = head_term
+
+        # return self._head_rechannel(head_input), x
+        head_in_channels = head_input.shape[1]
+        head_out_channels = rand_channel(self._head_rechannel.out_channels)
+
+        if self._head_rechannel.bias is not None:
+            head_output = F.conv1d(head_input, self._head_rechannel.weight[:head_out_channels, :head_in_channels, :],
+                                   bias=self._head_rechannel.bias[:head_out_channels])
+        else:
+            head_output = F.conv1d(head_input, self._head_rechannel.weight[:head_out_channels, :head_in_channels, :])
+
+        return head_output, x
 
     @property
     def _dilations(self) -> _Sequence[int]:
@@ -244,12 +303,12 @@ class _Layers(_nn.Module):
 
 class _Head(_nn.Module):
     def __init__(
-        self,
-        in_channels: int,
-        channels: int,
-        activation: str,
-        num_layers: int,
-        out_channels: int,
+            self,
+            in_channels: int,
+            channels: int,
+            activation: str,
+            num_layers: int,
+            out_channels: int,
     ):
         super().__init__()
 
@@ -295,10 +354,10 @@ class _Head(_nn.Module):
 
 class _WaveNet(_nn.Module):
     def __init__(
-        self,
-        layers_configs: _Sequence[_Dict],
-        head_config: _Optional[_Dict] = None,
-        head_scale: float = 1.0,
+            self,
+            layers_configs: _Sequence[_Dict],
+            head_config: _Optional[_Dict] = None,
+            head_scale: float = 1.0,
     ):
         super().__init__()
 

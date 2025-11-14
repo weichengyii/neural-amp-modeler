@@ -14,8 +14,8 @@
         "ny": null
     },
     "common": {
-        "x_path": "C:\\path\\to\\source.wav",
-        "y_path": "C:\\path\\to\\target.wav",
+        "x_path": "/home/wc1/Project/Github/neural-amp-modeler/data/input.wav",
+        "y_path": "/home/wc1/Project/Github/neural-amp-modeler/data/output.wav",
         "delay": 0
     }
 }

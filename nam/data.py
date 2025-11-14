@@ -85,13 +85,13 @@ class AudioShapeMismatchError(ValueError, DataError):
 
 
 def wav_to_np(
-    filename: _Union[str, _Path],
-    rate: _Optional[int] = None,
-    require_match: _Optional[_Union[str, _Path]] = None,
-    required_shape: _Optional[_Tuple[int, ...]] = None,
-    required_wavinfo: _Optional[WavInfo] = None,
-    preroll: _Optional[int] = None,
-    info: bool = False,
+        filename: _Union[str, _Path],
+        rate: _Optional[int] = None,
+        require_match: _Optional[_Union[str, _Path]] = None,
+        required_shape: _Optional[_Tuple[int, ...]] = None,
+        required_wavinfo: _Optional[WavInfo] = None,
+        preroll: _Optional[int] = None,
+        info: bool = False,
 ) -> _Union[_np.ndarray, _Tuple[_np.ndarray, WavInfo]]:
     """
     :param filename: Where to load from
@@ -107,13 +107,13 @@ def wav_to_np(
     """
 
     def main(
-        filename: _Union[str, _Path],
-        rate: _Optional[int] = None,
-        require_match: _Optional[_Union[str, _Path]] = None,
-        required_shape: _Optional[_Tuple[int, ...]] = None,
-        required_wavinfo: _Optional[WavInfo] = None,
-        preroll: _Optional[int] = None,
-        info: bool = False,
+            filename: _Union[str, _Path],
+            rate: _Optional[int] = None,
+            require_match: _Optional[_Union[str, _Path]] = None,
+            required_shape: _Optional[_Tuple[int, ...]] = None,
+            required_wavinfo: _Optional[WavInfo] = None,
+            preroll: _Optional[int] = None,
+            info: bool = False,
     ):
         x_wav = _wavio.read(str(filename))
         assert x_wav.data.shape[1] == _REQUIRED_CHANNELS, "Mono"
@@ -148,13 +148,13 @@ def wav_to_np(
         return arr if not info else (arr, WavInfo(x_wav.sampwidth, x_wav.rate))
 
     def librosa_fallback(
-        filename: _Union[str, _Path],
-        rate: _Optional[int] = None,
-        require_match: _Optional[_Union[str, _Path]] = None,
-        required_shape: _Optional[_Tuple[int, ...]] = None,
-        required_wavinfo: _Optional[WavInfo] = None,
-        preroll: _Optional[int] = None,
-        info: bool = False,
+            filename: _Union[str, _Path],
+            rate: _Optional[int] = None,
+            require_match: _Optional[_Union[str, _Path]] = None,
+            required_shape: _Optional[_Tuple[int, ...]] = None,
+            required_wavinfo: _Optional[WavInfo] = None,
+            preroll: _Optional[int] = None,
+            info: bool = False,
     ):
 
         x_wav, float_sample_rate = _librosa.load(str(filename), sr=None, mono=False)
@@ -224,7 +224,7 @@ def wav_to_np(
 
 
 def wav_to_tensor(
-    *args, info: bool = False, **kwargs
+        *args, info: bool = False, **kwargs
 ) -> _Union[_torch.Tensor, _Tuple[_torch.Tensor, WavInfo]]:
     out = wav_to_np(*args, info=info, **kwargs)
     if info:
@@ -240,12 +240,12 @@ def tensor_to_wav(x: _torch.Tensor, *args, **kwargs):
 
 
 def np_to_wav(
-    x: _np.ndarray,
-    filename: _Union[str, _Path],
-    rate: int = 48_000,
-    sampwidth: int = 3,
-    scale=None,
-    **kwargs,
+        x: _np.ndarray,
+        filename: _Union[str, _Path],
+        rate: int = 48_000,
+        sampwidth: int = 3,
+        scale=None,
+        **kwargs,
 ):
     if _wavio.__version__ <= "0.0.4" and scale is None:
         scale = "none"
@@ -338,26 +338,26 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
     """
 
     def __init__(
-        self,
-        x: _torch.Tensor,
-        y: _torch.Tensor,
-        nx: int,
-        ny: _Optional[int],
-        start: _Optional[int] = None,
-        stop: _Optional[int] = None,
-        start_samples: _Optional[int] = None,
-        stop_samples: _Optional[int] = None,
-        start_seconds: _Optional[_Union[int, float]] = None,
-        stop_seconds: _Optional[_Union[int, float]] = None,
-        delay: _Optional[_Union[int, float]] = None,
-        y_scale: float = 1.0,
-        x_path: _Optional[_Union[str, _Path]] = None,
-        y_path: _Optional[_Union[str, _Path]] = None,
-        input_gain: float = 0.0,
-        sample_rate: _Optional[float] = None,
-        require_input_pre_silence: _Optional[
-            float
-        ] = _DEFAULT_REQUIRE_INPUT_PRE_SILENCE,
+            self,
+            x: _torch.Tensor,
+            y: _torch.Tensor,
+            nx: int,
+            ny: _Optional[int],
+            start: _Optional[int] = None,
+            stop: _Optional[int] = None,
+            start_samples: _Optional[int] = None,
+            stop_samples: _Optional[int] = None,
+            start_seconds: _Optional[_Union[int, float]] = None,
+            stop_seconds: _Optional[_Union[int, float]] = None,
+            delay: _Optional[_Union[int, float]] = None,
+            y_scale: float = 1.0,
+            x_path: _Optional[_Union[str, _Path]] = None,
+            y_path: _Optional[_Union[str, _Path]] = None,
+            input_gain: float = 0.0,
+            sample_rate: _Optional[float] = None,
+            require_input_pre_silence: _Optional[
+                float
+            ] = _DEFAULT_REQUIRE_INPUT_PRE_SILENCE,
     ):
         """
         :param x: The input signal. A 1D array.
@@ -441,7 +441,7 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
             raise IndexError(f"Attempted to access datum {idx}, but len is {len(self)}")
         i = idx * self._ny
         j = i + self.y_offset
-        return self.x[i : i + self._nx + self._ny - 1], self.y[j : j + self._ny]
+        return self.x[i: i + self._nx + self._ny - 1], self.y[j: j + self._ny]
 
     def __len__(self) -> int:
         n = len(self.x)
@@ -547,10 +547,10 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
 
     @classmethod
     def _apply_delay(
-        cls,
-        x: _torch.Tensor,
-        y: _torch.Tensor,
-        delay: _Union[int, float],
+            cls,
+            x: _torch.Tensor,
+            y: _torch.Tensor,
+            delay: _Union[int, float],
     ) -> _Tuple[_torch.Tensor, _torch.Tensor]:
         # Check for floats that could be treated like ints (simpler algorithm)
         if isinstance(delay, float) and int(delay) == delay:
@@ -562,7 +562,7 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
 
     @classmethod
     def _apply_delay_int(
-        cls, x: _torch.Tensor, y: _torch.Tensor, delay: int
+            cls, x: _torch.Tensor, y: _torch.Tensor, delay: int
     ) -> _Tuple[_torch.Tensor, _torch.Tensor]:
         if delay > 0:
             x = x[:-delay]
@@ -574,16 +574,16 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
 
     @classmethod
     def _validate_start_stop(
-        cls,
-        x: _torch.Tensor,
-        y: _torch.Tensor,
-        start: _Optional[int] = None,
-        stop: _Optional[int] = None,
-        start_samples: _Optional[int] = None,
-        stop_samples: _Optional[int] = None,
-        start_seconds: _Optional[_Union[int, float]] = None,
-        stop_seconds: _Optional[_Union[int, float]] = None,
-        sample_rate: _Optional[int] = None,
+            cls,
+            x: _torch.Tensor,
+            y: _torch.Tensor,
+            start: _Optional[int] = None,
+            stop: _Optional[int] = None,
+            start_samples: _Optional[int] = None,
+            stop_samples: _Optional[int] = None,
+            start_seconds: _Optional[_Union[int, float]] = None,
+            stop_seconds: _Optional[_Union[int, float]] = None,
+            sample_rate: _Optional[int] = None,
     ) -> _Tuple[_Optional[int], _Optional[int]]:
         """
         Parse the requested start and stop trim points.
@@ -612,19 +612,19 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
         if start is not None:
             logger.warning("Using `stop` is deprecated; use `start_samples` instead.")
         if (
-            int(start is not None)
-            + int(start_samples is not None)
-            + int(start_seconds is not None)
-            >= 2
+                int(start is not None)
+                + int(start_samples is not None)
+                + int(start_seconds is not None)
+                >= 2
         ):
             raise ValueError(
                 "More than one start provided. Use only one of `start`, `start_samples`, or `start_seconds`!"
             )
         if (
-            int(stop is not None)
-            + int(stop_samples is not None)
-            + int(stop_seconds is not None)
-            >= 2
+                int(stop is not None)
+                + int(stop_samples is not None)
+                + int(stop_seconds is not None)
+                >= 2
         ):
             raise ValueError(
                 "More than one stop provided. Use only one of `stop`, `stop_samples`, or `stop_seconds`!"
@@ -716,11 +716,11 @@ class Dataset(AbstractDataset, _InitializableFromConfig):
 
     @classmethod
     def _validate_preceding_silence(
-        cls,
-        x: _torch.Tensor,
-        start: _Optional[int],
-        silent_seconds: float,
-        sample_rate: _Optional[float],
+            cls,
+            x: _torch.Tensor,
+            start: _Optional[int],
+            silent_seconds: float,
+            sample_rate: _Optional[float],
     ):
         """
         Make sure that the input is silent before the starting index.
@@ -837,7 +837,7 @@ class ConcatDataset(AbstractDataset, _InitializableFromConfig):
         if j != len(self.datasets) - 1:
             raise RuntimeError(
                 f"During lookup population, didn't get to the last dataset (index "
-                f"{len(self.datasets)-1}). Instead index ended at {j}."
+                f"{len(self.datasets) - 1}). Instead index ended at {j}."
             )
         if offset != len(self.datasets[-1]):
             raise RuntimeError(
@@ -869,7 +869,7 @@ _dataset_init_registry = {"dataset": Dataset.init_from_config}
 
 
 def register_dataset_initializer(
-    name: str, constructor: _Callable[[_Any], AbstractDataset], overwrite=False
+        name: str, constructor: _Callable[[_Any], AbstractDataset], overwrite=False
 ):
     """
     If you have other data set types, you can register their initializer by name using

@@ -68,7 +68,7 @@ def _apply_extensions():
     if extensions_path_not_in_sys_path:
         for i, p in enumerate(sys.path):
             if p == extensions_path:
-                sys.path = sys.path[:i] + sys.path[i + 1 :]
+                sys.path = sys.path[:i] + sys.path[i + 1:]
                 break
         else:
             raise RuntimeError("Failed to remove extensions path from sys.path?")
@@ -105,10 +105,13 @@ def nam_hello_world():
 
 def nam_full():
     parser = _ArgumentParser()
-    parser.add_argument("data_config_path", type=str)
-    parser.add_argument("model_config_path", type=str)
-    parser.add_argument("learning_config_path", type=str)
-    parser.add_argument("outdir")
+    parser.add_argument("--data_config_path", type=str,
+                        default="/home/wc1/Project/Github/neural-amp-modeler/nam_full_configs/data/single_pair.json")
+    parser.add_argument("--model_config_path", type=str,
+                        default="/home/wc1/Project/Github/neural-amp-modeler/nam_full_configs/models/wavenet.json")
+    parser.add_argument("--learning_config_path", type=str,
+                        default="/home/wc1/Project/Github/neural-amp-modeler/nam_full_configs/learning/default.json")
+    parser.add_argument("--outdir", default="/home/wc1/Project/Github/neural-amp-modeler/output/")
     parser.add_argument("--no-show", action="store_true", help="Don't show plots")
     parser.add_argument(
         "--no-plots", action="store_true", help="Don't create the plots at all"
